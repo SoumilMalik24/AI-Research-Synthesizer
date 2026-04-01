@@ -14,6 +14,7 @@ import os
 os.environ["LANGCHAIN_TRACING_V2"] = "true"
 os.environ["LANGCHAIN_API_KEY"] = settings.LANGCHAIN_API_KEY
 os.environ["LANGCHAIN_PROJECT"] = settings.LANGCHAIN_PROJECT
+os.environ["FRONTEND_URL"] = settings.FRONTEND_URL
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -27,7 +28,7 @@ app = FastAPI(title="Research Synthesizer API", version="1.0.0", lifespan=lifesp
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=[settings.FRONTEND_URL,"http://127.0.0.1:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

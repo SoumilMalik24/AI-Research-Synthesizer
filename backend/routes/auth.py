@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from pydantic import BaseModel, EmailStr
@@ -163,8 +164,14 @@ async def google_callback(code: str, db: AsyncSession = Depends(get_db)):
         await db.flush()
 
     token_data = {"sub": str(user.id), "role": user.role.value}
-    return TokenResponse(
-        access_token=create_access_token(token_data),
-        refresh_token=create_refresh_token(token_data),
-        role=user.role.value
+    access_token = create_access_token(token_data)
+    refresh_token = create_refresh_token(token_data)
+
+    # Redirect to frontend with tokens as URL parameters
+    frontend_url = (
+        f"http://localhost:5173/auth/callback"
+        f"?access_token={access_token}"
+        f"&refresh_token={refresh_token}"
+        f"&role={user.role.value}"
     )
+    return RedirectResponse(url=frontend_url)

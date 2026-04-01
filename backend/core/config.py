@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str = "redis://localhost:6379"
 
+    # Frontend URL (for OAuth redirect)
+    FRONTEND_URL: str = ""
+
     class Config:
         env_file = ".env"  
 
