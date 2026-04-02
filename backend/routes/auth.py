@@ -169,7 +169,7 @@ async def google_callback(code: str, db: AsyncSession = Depends(get_db)):
 
     # Redirect to frontend with tokens as URL parameters
     frontend_url = (
-        f"http://localhost:5173/auth/callback"
+        f"{settings.FRONTEND_URL.rstrip('/')}/auth/callback"
         f"?access_token={access_token}"
         f"&refresh_token={refresh_token}"
         f"&role={user.role.value}"
