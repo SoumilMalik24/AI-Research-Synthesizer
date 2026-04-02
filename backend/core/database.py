@@ -5,9 +5,8 @@ from core.config import settings
 DATABASE_URL = (
     settings.DATABASE_URL
     .replace("postgresql://", "postgresql+asyncpg://")
-    .replace("?sslmode=require", "")
-    .replace("&channel_binding=require", "")
-    .replace("?channel_binding=require", "")
+    .replace("postgres://", "postgresql+asyncpg://")
+    .split("?")[0]
 )
 
 engine = create_async_engine(DATABASE_URL, echo=True, connect_args={"ssl": True})
