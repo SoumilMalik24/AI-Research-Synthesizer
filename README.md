@@ -247,5 +247,5 @@ Contributions are what make the open source community such an amazing place to l
 ---
 
 <p align="center">
-  Built by researchers, for researchers.
+  Built by Soumil Malik, for researchers.
 </p>
