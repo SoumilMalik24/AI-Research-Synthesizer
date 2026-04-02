@@ -32,10 +32,15 @@ def _make_session_factory():
 
     Solution: build a fresh engine inside the task so it binds to the correct loop.
     """
-    DATABASE_URL = settings.DATABASE_URL.replace(
-        "postgresql://", "postgresql+asyncpg://"
+    # Strip all query params (sslmode, channel_binding, etc.) just like in core.database
+    DATABASE_URL = (
+        settings.DATABASE_URL
+        .replace("postgresql://", "postgresql+asyncpg://")
+        .replace("postgres://", "postgresql+asyncpg://")
+        .split("?")[0]
     )
-    engine = create_async_engine(DATABASE_URL, echo=False)
+    # Required to pass ssl=True since we stripped sslmode from the URL above
+    engine = create_async_engine(DATABASE_URL, echo=False, connect_args={"ssl": True})
     factory = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     return engine, factory
 
