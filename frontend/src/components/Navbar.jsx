@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { LogOut, History, LayoutDashboard, FlaskConical } from 'lucide-react'
+import { LogOut, History, LayoutDashboard, FlaskConical, Home } from 'lucide-react'
 
 export default function Navbar() {
   const { isLoggedIn, isAdmin, logout } = useAuth()
@@ -15,8 +15,8 @@ export default function Navbar() {
     <nav className="sticky top-0 z-50 bg-[#F5F2EA] border-b border-[#E8E6DE]">
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
 
-        {/* Logo — goes to /home if logged in, landing page if not */}
-        <Link to={isLoggedIn ? '/home' : '/'} className="flex items-center gap-2">
+        {/* Logo — goes to landing page regardless of login status */}
+        <Link to="/" className="flex items-center gap-2">
           <div className="w-8 h-8 bg-[#22C55E] rounded-lg flex items-center justify-center">
             <FlaskConical size={16} className="text-white" />
           </div>
@@ -28,6 +28,14 @@ export default function Navbar() {
         {/* Nav links — only show when logged in */}
         {isLoggedIn ? (
           <div className="flex items-center gap-2">
+            <Link
+              to="/home"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium text-[#6B6B67] hover:text-[#1C1C1A] hover:bg-white transition-all"
+            >
+              <Home size={15} />
+              Home
+            </Link>
+
             <Link
               to="/history"
               className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium text-[#6B6B67] hover:text-[#1C1C1A] hover:bg-white transition-all"
