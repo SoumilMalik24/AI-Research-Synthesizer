@@ -30,10 +30,12 @@ async def get_all_users(
     Returns all users on the platform.
     Only admins can see this — normal users get 403.
     """
-    result = await db.execute(
-        select(User).order_by(User.created_at.desc())
-    )
-    users = result.scalars().all()
+    # FIX: Use async with for database session to ensure proper resource management
+    async with db as session:
+        result = await session.execute(
+            select(User).order_by(User.created_at.desc())
+        )
+        users = result.scalars().all()
 
     return {"users": [
         {
@@ -73,8 +75,10 @@ async def get_all_jobs(
         except ValueError:
             raise HTTPException(status_code=400, detail=f"Invalid status: {status}")
 
-    result = await db.execute(query)
-    jobs = result.scalars().all()
+    # FIX: Use async with for database session to ensure proper resource management
+    async with db as session:
+        result = await session.execute(query)
+        jobs = result.scalars().all()
 
     return {"jobs": [
         {
@@ -104,30 +108,32 @@ async def get_platform_stats(
     Platform-wide analytics — total users, total jobs, total cost, success rate.
     This is the kind of data a startup founder looks at every morning.
     """
-    # Count total users
-    user_count = await db.execute(select(func.count(User.id)))
-    total_users = user_count.scalar()
+    # FIX: Use async with for database session to ensure proper resource management
+    async with db as session:
+        # Count total users
+        user_count = await session.execute(select(func.count(User.id)))
+        total_users = user_count.scalar()
 
-    # Count jobs by status
-    job_stats = await db.execute(
-        select(ResearchJob.status, func.count(ResearchJob.id))
-        .group_by(ResearchJob.status)
-    )
-    job_counts = {row[0].value: row[1] for row in job_stats.all()}
+        # Count jobs by status
+        job_stats = await session.execute(
+            select(ResearchJob.status, func.count(ResearchJob.id))
+            .group_by(ResearchJob.status)
+        )
+        job_counts = {row[0].value: row[1] for row in job_stats.all()}
 
-    # Sum total cost across ALL jobs
-    cost_result = await db.execute(
-        select(func.sum(ResearchJob.total_cost_usd))
-        .where(ResearchJob.total_cost_usd.isnot(None))
-    )
-    total_cost = cost_result.scalar() or 0.0
+        # Sum total cost across ALL jobs
+        cost_result = await session.execute(
+            select(func.sum(ResearchJob.total_cost_usd))
+            .where(ResearchJob.total_cost_usd.isnot(None))
+        )
+        total_cost = cost_result.scalar() or 0.0
 
-    # Sum total tokens across ALL jobs
-    token_result = await db.execute(
-        select(func.sum(ResearchJob.total_tokens_used))
-        .where(ResearchJob.total_tokens_used.isnot(None))
-    )
-    total_tokens = token_result.scalar() or 0.0
+        # Sum total tokens across ALL jobs
+        token_result = await session.execute(
+            select(func.sum(ResearchJob.total_tokens_used))
+            .where(ResearchJob.total_tokens_used.isnot(None))
+        )
+        total_tokens = token_result.scalar() or 0.0
 
     total_jobs = sum(job_counts.values())
     completed = job_counts.get("completed", 0)
@@ -161,21 +167,23 @@ async def update_user_role(
     PATCH is used instead of PUT because we're only updating ONE field,
     not replacing the whole user object.
     """
-    # Find the user to update
-    user = await db.get(User, user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+    # FIX: Use async with for database session to ensure proper resource management
+    async with db as session:
+        # Find the user to update
+        user = await session.get(User, user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
 
-    # Prevent admin from accidentally removing their own admin role
-    if user.id == current_user.id:
-        raise HTTPException(
-            status_code=400,
-            detail="You cannot change your own role"
-        )
+        # Prevent admin from accidentally removing their own admin role
+        if user.id == current_user.id:
+            raise HTTPException(
+                status_code=400,
+                detail="You cannot change your own role"
+            )
 
-    old_role = user.role.value
-    user.role = body.role
-    await db.commit()
+        old_role = user.role.value
+        user.role = body.role
+        await session.commit()
 
     return {
         "message": f"Role updated successfully",
