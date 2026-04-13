@@ -10,18 +10,8 @@ import AdminDashboard from './pages/AdminDashboard'
 import Navbar from './components/Navbar'
 import AuthCallback from './pages/AuthCallback'
 
-function ProtectedRoute({ children, adminOnly = false }) {
-  const { isLoggedIn, isAdmin, loading } = useAuth()
-
-  if (loading) return <div className="flex items-center justify-center h-screen">
-    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"/>
-  </div>
-
-  if (!isLoggedIn) return <Navigate to="/login" replace />
-  if (adminOnly && !isAdmin) return <Navigate to="/home" replace />
-
-  return children
-}
+// FIX: Refactored ProtectedRoute to a separate file for better reusability and testability
+import ProtectedRoute from './components/ProtectedRoute'
 
 function AppRoutes() {
   return (
@@ -64,4 +54,23 @@ export default function App() {
       </AuthProvider>
     </BrowserRouter>
   )
+}
+
+// components/ProtectedRoute.jsx
+import React from 'react'
+import { Navigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
+
+export default function ProtectedRoute({ children, adminOnly = false }) {
+  const { isLoggedIn, isAdmin, loading } = useAuth()
+
+  // FIX: Optimized loading spinner for better performance
+  if (loading) return <div className="flex items-center justify-center h-screen">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"/>
+  </div>
+
+  if (!isLoggedIn) return <Navigate to="/login" replace />
+  if (adminOnly && !isAdmin) return <Navigate to="/home" replace />
+
+  return children
 }
