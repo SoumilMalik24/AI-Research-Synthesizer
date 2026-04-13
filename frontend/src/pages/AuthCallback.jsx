@@ -14,7 +14,13 @@ export default function AuthCallback() {
     const refresh_token = searchParams.get('refresh_token')
     const role = searchParams.get('role')
 
-    if (access_token && refresh_token) {
+    // FIX: Implement token validation logic before using them in the `login` function
+    const isValidToken = (token) => {
+      // Add token validation logic here
+      return token && typeof token === 'string' && token.length > 0
+    }
+
+    if (isValidToken(access_token) && isValidToken(refresh_token)) {
       // Same login function used for email login
       login({ access_token, refresh_token, role })
       navigate('/home', { replace: true })
@@ -25,10 +31,10 @@ export default function AuthCallback() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-[#F5F2EA] flex items-center justify-center">
+    <div className="min-h-screen bg-theme-background flex items-center justify-center">
       <div className="text-center">
-        <Loader2 size={32} className="animate-spin text-[#22C55E] mx-auto mb-3" />
-        <p className="text-[#6B6B67]">Completing sign in...</p>
+        <Loader2 size={32} className="animate-spin text-theme-primary mx-auto mb-3" />
+        <p className="text-theme-secondary">Completing sign in...</p>
       </div>
     </div>
   )
