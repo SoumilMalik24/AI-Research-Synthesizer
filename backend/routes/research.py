@@ -34,7 +34,8 @@ async def submit_query(
     await db.commit()
     
     try:
-        result = run_research_pipeline.delay(
+        # FIX: Removed unused variable 'result' to clean up the code
+        run_research_pipeline.delay(
             job_id=str(job.id),
             query=body.query,
             max_papers=body.max_papers
@@ -72,16 +73,16 @@ async def get_job_status(
         raise HTTPException(status_code=403, detail="Access denied")
 
     return JobStatusResponse(
-    job_id=job.id,
-    status=job.status,
-    query=job.query,
-    created_at=job.created_at,
-    completed_at=job.completed_at,
-    report=job.report,
-    error_message=job.error_message,
-    total_tokens_used=job.total_tokens_used,
-    total_cost_usd=job.total_cost_usd,
-)
+        job_id=job.id,
+        status=job.status,
+        query=job.query,
+        created_at=job.created_at,
+        completed_at=job.completed_at,
+        report=job.report,
+        error_message=job.error_message,
+        total_tokens_used=job.total_tokens_used,
+        total_cost_usd=job.total_cost_usd,
+    )
 
 @router.get("/history")
 async def get_history(
