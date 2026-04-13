@@ -11,9 +11,11 @@ export default defineConfig(({ mode }) => {
       tailwindcss(),
     ],
     server: {
-      port: 5173,
+      // FIX: Use an environment variable for the server port to avoid conflicts with other services or environments.
+      port: parseInt(env.VITE_SERVER_PORT) || 5173,
       proxy: {
         '/api': {
+          // FIX: Ensure that VITE_API_BASE_URL does not contain sensitive information or is properly secured.
           target: env.VITE_API_BASE_URL,
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api/, '')
