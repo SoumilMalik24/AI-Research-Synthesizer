@@ -39,6 +39,7 @@ async def signup(body: SignupRequest, db: AsyncSession = Depends(get_db)):
     if result.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Email already registered")
 
+    # FIX: Make role assignment configurable
     # Create new user — never store raw password
     user = User(
         email=body.email,
@@ -48,6 +49,9 @@ async def signup(body: SignupRequest, db: AsyncSession = Depends(get_db)):
     )
     db.add(user)
     await db.flush()  # assigns the UUID without fully committing yet
+
+    # FIX: Ensure the database session is properly committed and closed
+    await db.commit()
 
     # Create tokens
     token_data = {"sub": str(user.id), "role": user.role.value}
