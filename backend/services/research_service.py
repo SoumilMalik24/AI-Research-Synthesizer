@@ -1,9 +1,14 @@
 import os
 from core.config import settings
 
-os.environ["LANGCHAIN_TRACING_V2"] = "true"
-os.environ["LANGCHAIN_API_KEY"] = settings.LANGCHAIN_API_KEY
-os.environ["LANGCHAIN_PROJECT"] = settings.LANGCHAIN_PROJECT
+# FIX: Use a configuration management tool to handle environment variables instead of hardcoding them.
+from dotenv import load_dotenv
+
+load_dotenv()
+
+os.environ["LANGCHAIN_TRACING_V2"] = os.getenv("LANGCHAIN_TRACING_V2", "true")
+os.environ["LANGCHAIN_API_KEY"] = os.getenv("LANGCHAIN_API_KEY", settings.LANGCHAIN_API_KEY)
+os.environ["LANGCHAIN_PROJECT"] = os.getenv("LANGCHAIN_PROJECT", settings.LANGCHAIN_PROJECT)
 
 from core.celery_app import celery_app
 from models.user import User  # must be imported so SQLAlchemy metadata knows about the `users` table
@@ -19,6 +24,9 @@ from sqlalchemy.orm import sessionmaker
 import asyncio
 import uuid
 
+# FIX: Reuse the database engine across multiple task executions to improve performance.
+engine = None
+SessionLocal = None
 
 def _make_session_factory():
     """
@@ -32,17 +40,19 @@ def _make_session_factory():
 
     Solution: build a fresh engine inside the task so it binds to the correct loop.
     """
-    # Strip all query params (sslmode, channel_binding, etc.) just like in core.database
-    DATABASE_URL = (
-        settings.DATABASE_URL
-        .replace("postgresql://", "postgresql+asyncpg://")
-        .replace("postgres://", "postgresql+asyncpg://")
-        .split("?")[0]
-    )
-    # Required to pass ssl=True since we stripped sslmode from the URL above
-    engine = create_async_engine(DATABASE_URL, echo=False, connect_args={"ssl": True})
-    factory = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-    return engine, factory
+    global engine, SessionLocal
+    if engine is None or SessionLocal is None:
+        # Strip all query params (sslmode, channel_binding, etc.) just like in core.database
+        DATABASE_URL = (
+            settings.DATABASE_URL
+            .replace("postgresql://", "postgresql+asyncpg://")
+            .replace("postgres://", "postgresql+asyncpg://")
+            .split("?")[0]
+        )
+        # Required to pass ssl=True since we stripped sslmode from the URL above
+        engine = create_async_engine(DATABASE_URL, echo=False, connect_args={"ssl": True})
+        SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    return engine, SessionLocal
 
 
 # Celery tasks can't be async natively — we wrap with asyncio.run()
@@ -72,7 +82,8 @@ async def _run_pipeline_async(job_id: str, query: str, max_papers: int):
 
             try:
                 # Step 2: Run the 3 agents in sequence
-                print(f"[Pipeline] Starting search for: {query}")
+                # FIX: Sanitize logs to avoid exposing sensitive information.
+                print(f"[Pipeline] Starting search for job ID: {job_id}")
                 papers = await run_search_agent(query, max_papers)
 
                 print(f"[Pipeline] Translating {len(papers)} papers...")
@@ -107,4 +118,4 @@ async def _run_pipeline_async(job_id: str, query: str, max_papers: int):
                 raise  # re-raise so Celery knows the task failed
     finally:
         # Always dispose the engine to close all asyncpg connections cleanly
-        await engine.dispose()
+        await engine.dispose()
