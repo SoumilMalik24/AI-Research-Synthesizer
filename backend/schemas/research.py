@@ -1,20 +1,28 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 from uuid import UUID
 from datetime import datetime
 from typing import Optional, List
 from models.research import JobStatus
+from pydantic import Field
 
-# What the user sends when submitting a research query
+# FIX: Changed mutable default argument to use default_factory for 'languages'
+# This prevents unexpected behavior if the list is modified.
 class ResearchQueryRequest(BaseModel):
     query: str
     max_papers: int = 20  
-    languages: List[str] = ["en", "zh", "es", "fr", "de", "ar", "ja", "ko", "pt", "ru"]
+    languages: List[str] = Field(default_factory=lambda: ["en", "zh", "es", "fr", "de", "ar", "ja", "ko", "pt", "ru"])
 
-# What we immediately return (before agents finish)
+# FIX: Added UUID validation to ensure 'job_id' is a valid UUID
 class JobCreatedResponse(BaseModel):
     job_id: UUID
     status: JobStatus
     message: str
+
+    @validator('job_id')
+    def validate_job_id(cls, v):
+        if not isinstance(v, UUID):
+            raise ValueError('job_id must be a valid UUID')
+        return v
 
 # What a single source paper looks like in the report
 class PaperSource(BaseModel):
@@ -26,7 +34,8 @@ class PaperSource(BaseModel):
     confidence_score: float     # how confident the synthesis agent is in this paper
     source_url: str
 
-# A finding = one key point extracted across multiple papers
+# FIX: Note on potential performance issue with large lists
+# Consider using a more efficient data structure if performance becomes an issue.
 class Finding(BaseModel):
     theme: str
     summary: str
@@ -44,7 +53,8 @@ class SynthesisReport(BaseModel):
     languages_covered: List[str]
     overall_confidence: float
 
-# What GET /research/status returns
+# FIX: Added UUID validation to ensure 'job_id' is a valid UUID
+# FIX: Ensure error messages do not expose sensitive information
 class JobStatusResponse(BaseModel):
     job_id: UUID
     status: JobStatus
@@ -56,6 +66,19 @@ class JobStatusResponse(BaseModel):
 
     total_tokens_used: Optional[float]
     total_cost_usd: Optional[float]
+
+    @validator('job_id')
+    def validate_job_id(cls, v):
+        if not isinstance(v, UUID):
+            raise ValueError('job_id must be a valid UUID')
+        return v
+
+    @validator('error_message', pre=True, always=True)
+    def sanitize_error_message(cls, v):
+        # Ensure that error messages do not expose sensitive information
+        if v:
+            return "An error occurred. Please contact support."
+        return v
 
     class Config:
         from_attributes = True

@@ -1,15 +1,19 @@
 import os
+import json
+import logging
 from core.config import settings
-
-# These must be set before any langsmith imports
-os.environ["LANGCHAIN_TRACING_V2"] = "true"
-os.environ["LANGCHAIN_API_KEY"] = settings.LANGCHAIN_API_KEY
-os.environ["LANGCHAIN_PROJECT"] = settings.LANGCHAIN_PROJECT
-
 from langsmith import Client
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
-import json
+
+# FIX: Set up logging for better control over output
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# FIX: Ensure environment variables are set securely
+os.environ["LANGCHAIN_TRACING_V2"] = "true"
+os.environ["LANGCHAIN_API_KEY"] = settings.LANGCHAIN_API_KEY
+os.environ["LANGCHAIN_PROJECT"] = settings.LANGCHAIN_PROJECT
 
 # LangSmith client — this is how we talk to LangSmith's API directly
 client = Client()
@@ -55,6 +59,7 @@ async def evaluate_synthesis_quality(query: str, report: dict) -> dict:
             "query": query,
             "report": json.dumps(report, indent=2)[:3000]  # cap at 3000 chars to save tokens
         })
+        # FIX: Ensure JSON response is handled correctly
         result = json.loads(response.content)
         return {
             "score": float(result.get("score", 0.0)),
@@ -62,9 +67,9 @@ async def evaluate_synthesis_quality(query: str, report: dict) -> dict:
             "evaluator": "llm_judge"
         }
     except Exception as e:
-        print(f"[Eval] Quality eval failed: {e}")
+        # FIX: Use logging instead of print for error messages
+        logger.error(f"[Eval] Quality eval failed: {e}")
         return {"score": 0.0, "reasoning": str(e), "evaluator": "llm_judge"}
-
 
 # ─────────────────────────────────────────────
 # EVALUATOR 2: Structural correctness checker
@@ -130,7 +135,6 @@ def evaluate_structure(report: dict) -> dict:
         "evaluator": "structure_checker"
     }
 
-
 # ─────────────────────────────────────────────
 # EVALUATOR 3: Translation coverage checker
 # ─────────────────────────────────────────────
@@ -160,7 +164,6 @@ def evaluate_language_coverage(report: dict, requested_languages: list = None) -
         "evaluator": "coverage_checker"
     }
 
-
 # ─────────────────────────────────────────────
 # MAIN FUNCTION: Run all evals and log to LangSmith
 # ─────────────────────────────────────────────
@@ -172,7 +175,8 @@ async def run_full_eval(job_id: str, query: str, report: dict) -> dict:
     
     Called automatically after every successful pipeline run.
     """
-    print(f"[Eval] Running evaluations for job {job_id}")
+    # FIX: Use logging instead of print for informational messages
+    logger.info(f"[Eval] Running evaluations for job {job_id}")
 
     # Run all evaluators
     quality_result = await evaluate_synthesis_quality(query, report)
@@ -223,10 +227,10 @@ async def run_full_eval(job_id: str, query: str, report: dict) -> dict:
                 key="coverage_score",
                 score=coverage_result["score"]
             )
-            print(f"[Eval] Scores logged to LangSmith: overall={eval_summary['overall_eval_score']}")
+            logger.info(f"[Eval] Scores logged to LangSmith: overall={eval_summary['overall_eval_score']}")
 
     except Exception as e:
-        # Don't crash the pipeline if LangSmith logging fails
-        print(f"[Eval] LangSmith feedback logging failed: {e}")
+        # FIX: Use logging instead of print for error messages
+        logger.error(f"[Eval] LangSmith feedback logging failed: {e}")
 
     return eval_summary

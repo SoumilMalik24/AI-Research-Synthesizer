@@ -11,29 +11,30 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     # Google OAuth
-    GOOGLE_CLIENT_ID: str = ""
-    GOOGLE_CLIENT_SECRET: str = ""
+    GOOGLE_CLIENT_ID: str
+    GOOGLE_CLIENT_SECRET: str
     GOOGLE_REDIRECT_URI: str = "http://localhost:8000/auth/google/callback"
 
     # LLM
-    OPENAI_API_KEY: str = ""
+    OPENAI_API_KEY: str
 
     # LangSmith
     LANGCHAIN_TRACING_V2: str = "true"
-    LANGCHAIN_API_KEY: str = ""
+    LANGCHAIN_API_KEY: str
     LANGCHAIN_PROJECT: str = "research-synthesizer"
 
     # Pinecone
-    PINECONE_API_KEY: str = ""
-    PINECONE_ENV: str = ""
+    PINECONE_API_KEY: str
+    PINECONE_ENV: str
 
     # Redis
     REDIS_URL: str = "redis://localhost:6379"
 
     # Frontend URL (for OAuth redirect)
-    FRONTEND_URL: str = ""
+    FRONTEND_URL: str
 
     class Config:
+        # FIX: Ensure the .env file is added to .gitignore and access to it is restricted to prevent sensitive information exposure.
         env_file = ".env"  
 
 

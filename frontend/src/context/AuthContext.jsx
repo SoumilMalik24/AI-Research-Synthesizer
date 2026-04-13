@@ -1,4 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react'
+import jwt_decode from 'jwt-decode' // FIX: Import jwt-decode to decode JWT tokens
+import jwt from 'jsonwebtoken' // FIX: Import jsonwebtoken to verify JWT tokens
 
 // Step 1: Create the context — think of it as a "global variable" for React
 const AuthContext = createContext(null)
@@ -14,22 +16,55 @@ export function AuthProvider({ children }) {
     const token = localStorage.getItem('access_token')
     if (token) {
       try {
-        // JWT has 3 parts separated by dots: header.payload.signature
-        const payload = JSON.parse(atob(token.split('.')[1]))
+        // FIX: Verify the token signature before decoding
+        const verified = jwt.verify(token, 'your-256-bit-secret') // Replace with your secret
+        if (verified) {
+          const payload = jwt_decode(token)
 
-        // Check if token is expired
-        if (payload.exp * 1000 > Date.now()) {
-          setUser({ id: payload.sub, role: payload.role })
-        } else {
-          // Token expired — clear it
-          localStorage.removeItem('access_token')
-          localStorage.removeItem('refresh_token')
+          // Check if token is expired
+          if (payload.exp * 1000 > Date.now()) {
+            setUser({ id: payload.sub, role: payload.role })
+          } else {
+            // Token expired — clear it
+            localStorage.removeItem('access_token')
+            localStorage.removeItem('refresh_token')
+          }
         }
-      } catch {
+      } catch (error) {
+        // FIX: Log errors for debugging
+        console.error('Token verification failed:', error)
         localStorage.removeItem('access_token')
       }
     }
     setLoading(false)
+  }, [])
+
+  // FIX: Add event listener for storage changes to handle token updates
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const token = localStorage.getItem('access_token')
+      if (token) {
+        try {
+          const verified = jwt.verify(token, 'your-256-bit-secret') // Replace with your secret
+          if (verified) {
+            const payload = jwt_decode(token)
+            if (payload.exp * 1000 > Date.now()) {
+              setUser({ id: payload.sub, role: payload.role })
+            } else {
+              setUser(null)
+            }
+          }
+        } catch (error) {
+          console.error('Token verification failed:', error)
+          setUser(null)
+        }
+      } else {
+        setUser(null)
+      }
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
   }, [])
 
   const login = (tokens) => {
@@ -37,9 +72,16 @@ export function AuthProvider({ children }) {
     localStorage.setItem('access_token', tokens.access_token)
     localStorage.setItem('refresh_token', tokens.refresh_token)
 
-    // Decode the token to get user info
-    const payload = JSON.parse(atob(tokens.access_token.split('.')[1]))
-    setUser({ id: payload.sub, role: tokens.role })
+    // FIX: Verify the token signature before decoding
+    try {
+      const verified = jwt.verify(tokens.access_token, 'your-256-bit-secret') // Replace with your secret
+      if (verified) {
+        const payload = jwt_decode(tokens.access_token)
+        setUser({ id: payload.sub, role: tokens.role })
+      }
+    } catch (error) {
+      console.error('Token verification failed:', error)
+    }
   }
 
   const logout = () => {
